@@ -89,14 +89,14 @@ public class ConsoleReport implements Reporter {
     StringBuilder sb = new StringBuilder();
 
     sb.append("\n\n" + HEADER + "\n\n");
-    if (result.fileCount() == 0) {
+    if (result.indexedFileCount() == 0) {
       sb.append("  No files analyzed\n");
     } else if (r.hasNoIssues()) {
       sb.append("  No issues to display ");
-      filesAnalyzed(sb, result.fileCount());
+      filesAnalyzed(sb, result.indexedFileCount());
       sb.append("\n");
     } else {
-      printIssues(r, sb, result.fileCount());
+      printIssues(r, sb, result.indexedFileCount());
     }
     sb.append("\n-------------------------------------------\n\n");
 

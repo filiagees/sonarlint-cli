@@ -210,6 +210,11 @@ public class IssuesReport {
     public String creationDate() {
       return creationDate;
     }
+
+    @Override
+    public String getType() {
+      return (wrapped != null) ? wrapped.getType() : "[unknown issue type]";
+    }
   }
 
   private ResourceReport getOrCreate(Path filePath) {

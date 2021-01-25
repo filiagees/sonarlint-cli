@@ -29,7 +29,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public class ConfigurationReader {
   private static final String FAIL_PARSE_JSON = "Failed to parse JSON file: ";

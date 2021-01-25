@@ -59,7 +59,7 @@ public class ConsoleReportTest {
     setStreams();
     report = new ConsoleReport();
     result = mock(AnalysisResults.class);
-    when(result.fileCount()).thenReturn(1);
+    when(result.indexedFileCount()).thenReturn(1);
   }
 
   @Test
@@ -113,7 +113,7 @@ public class ConsoleReportTest {
 
   @Test
   public void testReportMultipleFiles() throws IOException {
-    when(result.fileCount()).thenReturn(2);
+    when(result.indexedFileCount()).thenReturn(2);
     List<Issue> issues = new LinkedList<>();
     report.execute(PROJECT_NAME, DATE, toTrackables(issues), result, k -> null);
     stdOut.flush();
@@ -125,7 +125,7 @@ public class ConsoleReportTest {
   @Test
   public void testReportNoFilesAnalyzed() throws IOException {
     List<Issue> issues = new LinkedList<>();
-    when(result.fileCount()).thenReturn(0);
+    when(result.indexedFileCount()).thenReturn(0);
     report.execute(PROJECT_NAME, DATE, toTrackables(issues), result, k -> null);
     stdOut.flush();
     assertThat(getLog(out)).contains("SonarLint Report");

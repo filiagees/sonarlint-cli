@@ -19,7 +19,7 @@
  */
 package org.sonarlint.cli.analysis;
 
-import com.google.common.annotations.VisibleForTesting;
+//import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.DirectoryStream;
@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.sonarlint.cli.SonarProperties;
 import org.sonarlint.cli.config.ConfigurationReader;
@@ -38,12 +39,31 @@ import org.sonarlint.cli.config.SonarQubeServer;
 import org.sonarlint.cli.util.Logger;
 import org.sonarsource.sonarlint.core.ConnectedSonarLintEngineImpl;
 import org.sonarsource.sonarlint.core.StandaloneSonarLintEngineImpl;
+import org.sonarsource.sonarlint.core.client.api.common.Language;
 import org.sonarsource.sonarlint.core.client.api.connected.ConnectedGlobalConfiguration;
 import org.sonarsource.sonarlint.core.client.api.standalone.StandaloneGlobalConfiguration;
 import org.sonarsource.sonarlint.core.client.api.standalone.StandaloneSonarLintEngine;
+import org.sonarsource.sonarlint.shaded.com.google.common.annotations.VisibleForTesting;
 
 public class SonarLintFactory {
   private static final Logger LOGGER = Logger.get();
+
+  public static final Language[] STANDALONE_LANGUAGES = {
+          Language.HTML,
+          Language.JAVA,
+          Language.JS,
+          Language.KOTLIN,
+          Language.PHP,
+          Language.PYTHON,
+          Language.RUBY,
+          Language.TS
+  };
+
+  public static final Language[] CONNECTED_ADDITIONAL_LANGUAGES = {
+          Language.SCALA,
+          Language.SWIFT,
+          Language.XML
+  };
 
   private static final Path GLOBAL_CONFIGURATION_FILEPATH;
 
@@ -119,10 +139,31 @@ public class SonarLintFactory {
     ConnectedGlobalConfiguration config = ConnectedGlobalConfiguration.builder()
       .setLogOutput(new DefaultLogOutput(LOGGER, verbose))
       .setServerId(server.id())
+      .setLogOutput(new DefaultLogOutput(LOGGER, true))
+      .setSonarLintUserHome(getSonarLintHome())
+      .addEnabledLanguages(STANDALONE_LANGUAGES)
+      .addEnabledLanguages(CONNECTED_ADDITIONAL_LANGUAGES)
+      .setExtraProperties(prepareExtraProps())
+      .setWorkDir(getWorkDir())
+      .setServerId(server.id())
       .build();
     ConnectedSonarLintEngineImpl engine = new ConnectedSonarLintEngineImpl(config);
     return new ConnectedSonarLint(engine, server, projectKey);
   }
+
+  // TODO: WIP ------
+  private static Path getSonarLintHome() {
+    return Paths.get("C:\\_\\sources\\sonarlint-intellij\\build\\idea-sandbox\\config").resolve("sonarlint");
+  }
+  private static Map<String, String> prepareExtraProps() {
+    return Collections.singletonMap(
+            "sonar.typescript.internal.typescriptLocation",
+            "C:\\_\\sources\\sonarlint-intellij\\build\\idea-sandbox\\plugins\\sonarlint-intellij");
+  }
+  private static Path getWorkDir() {
+    return Paths.get("C:\\_\\sources\\sonarlint-intellij\\build\\idea-sandbox\\system\\tmp").resolve("sonarlint");
+  }
+  // ------
 
   private static SonarLint createStandalone(boolean verbose) {
     LOGGER.info("Standalone mode");
@@ -153,6 +194,7 @@ public class SonarLintFactory {
 
     Path sonarLintHomePath = Paths.get(sonarlintHome);
     Path pluginDir = sonarLintHomePath.resolve("plugins");
+    LOGGER.debug("--- Using plugins dir as: " + pluginDir.toAbsolutePath().toString());
 
     List<URL> pluginsUrls = new ArrayList<>();
     try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(pluginDir)) {
@@ -160,6 +202,7 @@ public class SonarLintFactory {
         pluginsUrls.add(path.toUri().toURL());
       }
     }
+    LOGGER.debug("--- " + pluginsUrls.size() + " plugin(s) loaded");
     return pluginsUrls.toArray(new URL[pluginsUrls.size()]);
   }
 

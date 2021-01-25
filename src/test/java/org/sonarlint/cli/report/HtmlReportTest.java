@@ -32,6 +32,7 @@ import org.sonarsource.sonarlint.core.client.api.common.RuleDetails;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.AnalysisResults;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.ClientInputFile;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.Issue;
+import org.sonarsource.sonarlint.core.client.api.connected.ConnectedRuleDetails;
 import org.sonarsource.sonarlint.core.tracking.IssueTrackable;
 import org.sonarsource.sonarlint.core.tracking.Trackable;
 
@@ -50,7 +51,7 @@ public class HtmlReportTest {
   @Before
   public void setUp() {
     result = mock(AnalysisResults.class);
-    when(result.fileCount()).thenReturn(1);
+    when(result.indexedFileCount()).thenReturn(1);
     reportFile = temp.getRoot().toPath().resolve("report.html");
     html = new HtmlReport(temp.getRoot().toPath(), reportFile, StandardCharsets.UTF_8);
   }
@@ -72,7 +73,7 @@ public class HtmlReportTest {
 
   @Test
   public void testExtendedDesc() {
-    RuleDetails mockRuleDetailsWithExtendedDesc = mockRuleDetails();
+    ConnectedRuleDetails mockRuleDetailsWithExtendedDesc = mockRuleDetails();
     when(mockRuleDetailsWithExtendedDesc.getExtendedDescription()).thenReturn("bar baz");
 
     html.execute("project", new Date(), Arrays.asList(createTestIssue("foo", "squid:1234", "bla", "MAJOR", 1)), result,
@@ -83,8 +84,8 @@ public class HtmlReportTest {
       "<!doctype html><html><head><link href=\"rule.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><h1><big>Foo</big> (squid:1234)</h1><div class=\"rule-desc\">foo bar\n<div>bar baz</div></div></body></html>");
   }
 
-  private RuleDetails mockRuleDetails() {
-    RuleDetails ruleDetails = mock(RuleDetails.class);
+  private ConnectedRuleDetails mockRuleDetails() {
+    ConnectedRuleDetails ruleDetails = mock(ConnectedRuleDetails.class);
     when(ruleDetails.getName()).thenReturn("Foo");
     when(ruleDetails.getHtmlDescription()).thenReturn("foo bar");
     when(ruleDetails.getExtendedDescription()).thenReturn("");

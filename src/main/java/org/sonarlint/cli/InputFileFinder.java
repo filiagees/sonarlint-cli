@@ -19,8 +19,11 @@
  */
 package org.sonarlint.cli;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -163,6 +166,18 @@ public class InputFileFinder {
     @Override
     public String contents() throws IOException {
       return new String(Files.readAllBytes(path), charset);
+    }
+
+    @Override
+    public String relativePath()
+    {
+      return getPath();
+    }
+
+    @Override
+    public URI uri()
+    {
+      return new File(getPath()).toURI();
     }
   }
 }

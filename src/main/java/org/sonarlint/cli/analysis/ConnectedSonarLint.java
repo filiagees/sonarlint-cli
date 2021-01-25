@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -32,14 +33,20 @@ import org.sonarlint.cli.config.SonarQubeServer;
 import org.sonarlint.cli.report.ReportFactory;
 import org.sonarlint.cli.util.Logger;
 import org.sonarlint.cli.util.SystemInfo;
+import org.sonarsource.sonarlint.core.client.api.common.Language;
+import org.sonarsource.sonarlint.core.client.api.common.RuleDetails;
+import org.sonarsource.sonarlint.core.client.api.common.analysis.ClientInputFile;
+import org.sonarsource.sonarlint.core.client.api.common.analysis.Issue;
 import org.sonarsource.sonarlint.core.client.api.common.RuleDetails;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.AnalysisResults;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.ClientInputFile;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.Issue;
 import org.sonarsource.sonarlint.core.client.api.connected.ConnectedAnalysisConfiguration;
+import org.sonarsource.sonarlint.core.client.api.connected.ConnectedGlobalConfiguration;
 import org.sonarsource.sonarlint.core.client.api.connected.ConnectedSonarLintEngine;
 import org.sonarsource.sonarlint.core.client.api.connected.GlobalStorageStatus;
-import org.sonarsource.sonarlint.core.client.api.connected.ModuleStorageStatus;
+//import org.sonarsource.sonarlint.core.client.api.connected.ModuleStorageStatus;
+import org.sonarsource.sonarlint.core.client.api.connected.ProjectStorageStatus;
 import org.sonarsource.sonarlint.core.client.api.connected.ServerConfiguration;
 import org.sonarsource.sonarlint.core.tracking.CachingIssueTracker;
 import org.sonarsource.sonarlint.core.tracking.CachingIssueTrackerImpl;
@@ -84,26 +91,53 @@ public class ConnectedSonarLint extends SonarLint {
   }
 
   private void checkModuleStatus() {
-    engine.allModulesByKey().keySet().stream()
-      .filter(key -> key.equals(moduleKey))
-      .findAny()
-      .orElseThrow(() -> new IllegalStateException("Project key '" + moduleKey + "' not found in the binding storage. Maybe an update of the storage is needed with '-u'?"));
+//    engine.allModulesByKey().keySet().stream()
+//      .filter(key -> key.equals(moduleKey))
+//      .findAny()
+//      .orElseThrow(() -> new IllegalStateException("Project key '" + moduleKey + "' not found in the binding storage. Maybe an update of the storage is needed with '-u'?"));
 
-    ModuleStorageStatus moduleStorageStatus = engine.getModuleStorageStatus(moduleKey);
+    ProjectStorageStatus moduleStorageStatus = engine.getProjectStorageStatus(moduleKey); //< original was: projectKey
+//    ModuleStorageStatus moduleStorageStatus = engine.getModuleStorageStatus(moduleKey);
+
     if (moduleStorageStatus == null) {
       LOGGER.info("Updating data for module..");
-      engine.updateModule(getServerConfiguration(server), moduleKey);
+//      engine.updateModule(getServerConfiguration(server), moduleKey);
       LOGGER.info("Module updated");
     } else if (moduleStorageStatus.isStale()) {
       LOGGER.info("Module's data is stale. Updating..");
-      engine.updateModule(getServerConfiguration(server), moduleKey);
+//      engine.updateModule(getServerConfiguration(server), moduleKey);
       LOGGER.info("Module updated");
     }
   }
 
   private void update() {
-    engine.update(getServerConfiguration(server));
-    engine.allModulesByKey().keySet().stream()
+    ServerConfiguration serverConfiguration = getServerConfiguration(server);
+    LOGGER.debug(String.format("--- Using serverConfiguration as: url=%s, login=%s, password=%s",
+            serverConfiguration.getUrl(),
+            serverConfiguration.getLogin(),
+            serverConfiguration.getPassword()
+    ));
+    engine.update(serverConfiguration, null);
+    /*
+ERROR: Error executing SonarLint
+java.lang.IllegalStateException: Error 404 on http://localhost:9000/api/properties?format=json: Unknown url : /api/properties
+	at org.sonarsource.sonarlint.core.container.connected.SonarLintWsClient.handleError(SonarLintWsClient.java:127)
+	at org.sonarsource.sonarlint.core.container.connected.SonarLintWsClient.get(SonarLintWsClient.java:70)
+	at org.sonarsource.sonarlint.core.container.connected.update.PropertiesDownloader.fetchProperties(PropertiesDownloader.java:63)
+	at org.sonarsource.sonarlint.core.container.connected.update.PropertiesDownloader.fetchGlobalProperties(PropertiesDownloader.java:50)
+	at org.sonarsource.sonarlint.core.container.connected.update.PropertiesDownloader.fetchGlobalPropertiesTo(PropertiesDownloader.java:45)
+	at org.sonarsource.sonarlint.core.container.connected.update.perform.GlobalStorageUpdateExecutor.update(GlobalStorageUpdateExecutor.java:81)
+	at org.sonarsource.sonarlint.core.container.connected.ConnectedContainer.update(ConnectedContainer.java:102)
+	at org.sonarsource.sonarlint.core.ConnectedSonarLintEngineImpl.update(ConnectedSonarLintEngineImpl.java:189)
+	at org.sonarsource.sonarlint.core.ConnectedSonarLintEngineImpl.update(ConnectedSonarLintEngineImpl.java:175)
+	at org.sonarlint.cli.analysis.ConnectedSonarLint.update(ConnectedSonarLint.java:105)
+	at org.sonarlint.cli.analysis.ConnectedSonarLint.start(ConnectedSonarLint.java:77)
+	at org.sonarlint.cli.Main.run(Main.java:90)
+	at org.sonarlint.cli.Main.execute(Main.java:183)
+	at org.sonarlint.cli.Main.main(Main.java:148)
+     */
+
+    engine.allProjectsByKey().keySet().stream()
       .filter(key -> key.equals(moduleKey))
       .findAny()
       .orElseThrow(() -> new IllegalStateException("Project key '" + moduleKey + "' not found in the SonarQube server"));
@@ -112,7 +146,7 @@ public class ConnectedSonarLint extends SonarLint {
   }
 
   private void updateModule() {
-    engine.updateModule(getServerConfiguration(server), moduleKey);
+    engine.updateProject(getServerConfiguration(server), moduleKey, null);
   }
 
   private static ServerConfiguration getServerConfiguration(SonarQubeServer server) {
@@ -132,10 +166,14 @@ public class ConnectedSonarLint extends SonarLint {
   @Override
   protected void doAnalysis(Map<String, String> properties, ReportFactory reportFactory, List<ClientInputFile> inputFiles, Path baseDirPath) {
     Date start = new Date();
-    ConnectedAnalysisConfiguration config = new ConnectedAnalysisConfiguration(moduleKey, baseDirPath, baseDirPath.resolve(".sonarlint"),
-      inputFiles, properties);
+    ConnectedAnalysisConfiguration config = ConnectedAnalysisConfiguration.builder()
+            .setBaseDir(baseDirPath)
+            .setProjectKey(moduleKey)
+            .addInputFiles(inputFiles)
+            .putAllExtraProperties(properties)
+            .build();
     IssueCollector collector = new IssueCollector();
-    AnalysisResults result = engine.analyze(config, collector);
+    AnalysisResults result = engine.analyze(config, collector, null, null);
     engine.downloadServerIssues(getServerConfiguration(server), moduleKey);
     Collection<Trackable> trackables = matchAndTrack(baseDirPath, collector.get());
     generateReports(trackables, result, reportFactory, baseDirPath.getFileName().toString(), baseDirPath, start);
@@ -153,8 +191,8 @@ public class ConnectedSonarLint extends SonarLint {
     IssueTrackerCache cache = new InMemoryIssueTrackerCache();
     CachingIssueTracker issueTracker = new CachingIssueTrackerImpl(cache);
     trackablesPerFile.entrySet().forEach(entry -> issueTracker.matchAndTrackAsNew(entry.getKey(), entry.getValue()));
-    ServerIssueTracker serverIssueTracker = new ServerIssueTracker(new MyLogger(), new MyConsole(), issueTracker);
-    serverIssueTracker.update(engine, moduleKey, relativePaths);
+//    ServerIssueTracker serverIssueTracker = new ServerIssueTracker(new MyLogger(), new MyConsole(), issueTracker);
+//    serverIssueTracker.update(engine, moduleKey, relativePaths);
     return cache;
   }
 
@@ -202,27 +240,27 @@ public class ConnectedSonarLint extends SonarLint {
     engine.stop(false);
   }
 
-  private static class MyLogger implements org.sonarsource.sonarlint.core.tracking.Logger {
-    @Override public void error(String message, Exception e) {
-      LOGGER.error(message, e);
-    }
-
-    @Override public void debug(String message, Exception e) {
-      LOGGER.debug(message, e);
-    }
-
-    @Override public void debug(String message) {
-      LOGGER.debug(message);
-    }
-  }
-
-  private static class MyConsole implements Console {
-    @Override public void info(String message) {
-      LOGGER.info(message);
-    }
-
-    @Override public void error(String message, Throwable t) {
-      LOGGER.error(message, t);
-    }
-  }
+//  private static class MyLogger implements org.sonarsource.sonarlint.core.tracking.Logger {
+//    @Override public void error(String message, Exception e) {
+//      LOGGER.error(message, e);
+//    }
+//
+//    @Override public void debug(String message, Exception e) {
+//      LOGGER.debug(message, e);
+//    }
+//
+//    @Override public void debug(String message) {
+//      LOGGER.debug(message);
+//    }
+//  }
+//
+//  private static class MyConsole implements Console {
+//    @Override public void info(String message) {
+//      LOGGER.info(message);
+//    }
+//
+//    @Override public void error(String message, Throwable t) {
+//      LOGGER.error(message, t);
+//    }
+//  }
 }

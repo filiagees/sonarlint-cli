@@ -43,6 +43,7 @@ import org.sonarlint.cli.util.Logger;
 import org.sonarlint.cli.util.Util;
 import org.sonarsource.sonarlint.core.client.api.common.RuleDetails;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.AnalysisResults;
+import org.sonarsource.sonarlint.core.client.api.connected.ConnectedRuleDetails;
 import org.sonarsource.sonarlint.core.tracking.Trackable;
 
 public class HtmlReport implements Reporter {
@@ -67,7 +68,7 @@ public class HtmlReport implements Reporter {
     }
     report.setTitle(projectName);
     report.setDate(date);
-    report.setFilesAnalyzed(result.fileCount());
+    report.setFilesAnalyzed(result.indexedFileCount());
     copyRuleHtmlDescriptions(ruleDescriptionProducer, report);
     print(report);
   }
@@ -79,7 +80,7 @@ public class HtmlReport implements Reporter {
       Files.createDirectories(target);
       copyDependency(target, "rule.css");
       for (String ruleKey : ruleKeys) {
-        RuleDetails ruleDetails = ruleDescriptionProducer.apply(ruleKey);
+        ConnectedRuleDetails ruleDetails = (ConnectedRuleDetails) ruleDescriptionProducer.apply(ruleKey);
         String htmlDescription = ruleDetails.getHtmlDescription();
         String extendedDescription = ruleDetails.getExtendedDescription();
         if (!extendedDescription.isEmpty()) {
@@ -128,7 +129,7 @@ public class HtmlReport implements Reporter {
     }
   }
 
-  private void copyDependencies(Path toDir) throws URISyntaxException, IOException {
+  private void copyDependencies(Path toDir) throws IOException {
     Path target = toDir.resolve("sonarlintreport_files");
     Files.createDirectories(target);
 

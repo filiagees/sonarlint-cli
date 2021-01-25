@@ -19,7 +19,7 @@
  */
 package org.sonarlint.cli;
 
-import com.google.common.annotations.VisibleForTesting;
+//import com.google.common.annotations.VisibleForTesting;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -148,7 +148,7 @@ public class Main {
     execute(args, System2.INSTANCE);
   }
 
-  @VisibleForTesting
+//  @VisibleForTesting
   static void execute(String[] args, System2 system) {
     Options parsedOpts;
     try {
@@ -178,7 +178,10 @@ public class Main {
     ConfigurationReader reader = new ConfigurationReader();
     SonarLintFactory sonarLintFactory = new SonarLintFactory(reader);
 
-    int ret = new Main(parsedOpts, sonarLintFactory, reportFactory, fileFinder, getProjectHome(system)).run();
+    LOGGER.debug("parsedOpts = " + parsedOpts);
+    System.err.println("parsedOpts = " + parsedOpts);
+    int ret = new Main(parsedOpts, sonarLintFactory, reportFactory, fileFinder, getProjectHome(system))
+            .run();
     system.exit(ret);
     return;
   }

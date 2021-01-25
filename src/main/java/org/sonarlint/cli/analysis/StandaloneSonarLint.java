@@ -24,17 +24,24 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.sonarlint.cli.report.ReportFactory;
+import org.sonarlint.cli.util.ConsoleMonitor;
+import org.sonarlint.cli.util.Logger;
 import org.sonarsource.sonarlint.core.client.api.common.RuleDetails;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.AnalysisResults;
 import org.sonarsource.sonarlint.core.client.api.common.analysis.ClientInputFile;
 import org.sonarsource.sonarlint.core.client.api.standalone.StandaloneAnalysisConfiguration;
+import org.sonarsource.sonarlint.core.client.api.standalone.StandaloneRuleDetails;
 import org.sonarsource.sonarlint.core.client.api.standalone.StandaloneSonarLintEngine;
 import org.sonarsource.sonarlint.core.tracking.IssueTrackable;
 import org.sonarsource.sonarlint.core.tracking.Trackable;
 
 public class StandaloneSonarLint extends SonarLint {
+  private static final Logger LOGGER = Logger.get();
+
   private final StandaloneSonarLintEngine engine;
 
   public StandaloneSonarLint(StandaloneSonarLintEngine engine) {
@@ -46,16 +53,30 @@ public class StandaloneSonarLint extends SonarLint {
     Date start = new Date();
 
     IssueCollector collector = new IssueCollector();
-    StandaloneAnalysisConfiguration config = new StandaloneAnalysisConfiguration(baseDirPath, baseDirPath.resolve(".sonarlint"),
-      inputFiles, properties);
-    AnalysisResults result = engine.analyze(config, collector);
+    StandaloneAnalysisConfiguration config = StandaloneAnalysisConfiguration.builder()
+            .setBaseDir(baseDirPath)
+            .addInputFiles(inputFiles)
+            .putAllExtraProperties(properties)
+            .build();
+
+//            (baseDirPath,
+//            baseDirPath.resolve(".sonarlint"),
+//            inputFiles,
+//            properties);
+    org.sonarsource.sonarlint.core.client.api.common.LogOutput logOutput = new DefaultLogOutput(LOGGER, true);
+    AnalysisResults result = engine.analyze(config, collector, logOutput, new ConsoleMonitor());
     Collection<Trackable> trackables = collector.get().stream().map(IssueTrackable::new).collect(Collectors.toList());
     generateReports(trackables, result, reportFactory, baseDirPath.getFileName().toString(), baseDirPath, start);
   }
 
   @Override
   protected RuleDetails getRuleDetails(String ruleKey) {
-    return engine.getRuleDetails(ruleKey);
+    Optional<StandaloneRuleDetails> ruleDetails = engine.getRuleDetails(ruleKey);
+    if (!ruleDetails.isPresent())
+    {
+      LOGGER.error("Null ruleDetails found for key: '" +  ruleKey + "'");
+    }
+    return ruleDetails.get();
   }
 
   @Override
